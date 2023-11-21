@@ -50,18 +50,13 @@ fn main() {
     .expect("failed to parse wat");
     let tracer = wasmi::tracer::Tracer::new(HashMap::new(), &Vec::new());
 
-    // Load wasm binary and prepare it for instantiation.
     let module = wasmi::Module::from_buffer(&wasm_binary).expect("failed to load wasm");
 
-    // Instantiate a module with empty imports and
-    // asserting that there is no `start` function.
     let tracer = Rc::new(RefCell::new(tracer));
     let instance = ModuleInstance::new(&module, &ImportsBuilder::default(), Some(tracer.clone()))
         .expect("failed to instantiate wasm module")
         .assert_no_start();
 
-    // Finally, invoke exported function "test" with no parameters
-    // and empty external function executor.
     assert_eq!(instance.invoke_export_trace(
         "fibonacci",
         &[wasmi::RuntimeValue::I32(6)],
