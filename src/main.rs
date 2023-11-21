@@ -2,8 +2,9 @@ extern crate wabt;
 extern crate wasmi;
 
 use core::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
-use wasmi::{ImportsBuilder, ModuleInstance, NopExternals, RuntimeValue};
+use wasmi::{ImportsBuilder, ModuleInstance, NopExternals};
 
 fn main() {
     // Parse WAT (WebAssembly Text format) into wasm bytecode.
@@ -47,34 +48,26 @@ fn main() {
             "#,
     )
     .expect("failed to parse wat");
-
-    let mut tracer = wasmi::tracer::Tracer::default();
+    let tracer = wasmi::tracer::Tracer::new(HashMap::new(), &Vec::new());
 
     // Load wasm binary and prepare it for instantiation.
     let module = wasmi::Module::from_buffer(&wasm_binary).expect("failed to load wasm");
 
     // Instantiate a module with empty imports and
     // asserting that there is no `start` function.
-    let instance = ModuleInstance::new(&module, &ImportsBuilder::default())
+    let tracer = Rc::new(RefCell::new(tracer));
+    let instance = ModuleInstance::new(&module, &ImportsBuilder::default(), Some(tracer.clone()))
         .expect("failed to instantiate wasm module")
         .assert_no_start();
 
-    tracer.register_module_instance(&instance);
-    let tracer = Rc::new(RefCell::new(tracer));
-
     // Finally, invoke exported function "test" with no parameters
     // and empty external function executor.
-    assert_eq!(
-        instance
-            .invoke_export_trace(
-                "fibonacci",
-                &[wasmi::RuntimeValue::I32(6)],
-                &mut NopExternals,
-                tracer.clone(),
-            )
-            .expect("failed to execute export"),
-        Some(RuntimeValue::I32(8)),
-    );
+    assert_eq!(instance.invoke_export_trace(
+        "fibonacci",
+        &[wasmi::RuntimeValue::I32(6)],
+        &mut NopExternals,
+        tracer.clone(),
+    ).expect("failed to run export"), Some(wasmi::RuntimeValue::I32(8)));
 
     println!("{:?}", (*tracer).borrow());
 }
