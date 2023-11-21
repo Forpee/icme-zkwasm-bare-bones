@@ -10,41 +10,41 @@ fn main() {
     // Parse WAT (WebAssembly Text format) into wasm bytecode.
     let wasm_binary: Vec<u8> = wabt::wat2wasm(
         r#"
-            (module
-                (memory $0 1)
-                (export "memory" (memory $0))
-                (export "fibonacci" (func $fibonacci))
-                (func $fibonacci (; 0 ;) (param $0 i32) (result i32)
-                 (block $label$0
-                  (br_if $label$0
-                   (i32.ne
-                    (i32.or
-                     (local.get $0)
-                     (i32.const 1)
+                (module
+                (export "fib" (func $fib))
+                (func $fib (param $n f32) (result f32)
+                (local $result f32)
+                (block
+                (if
+                    (f32.lt
+                    (local.get $n)
+                    (f32.const 2.0)
                     )
-                    (i32.const 1)
-                   )
-                  )
-                  (return
-                   (local.get $0)
-                  )
-                 )
-                 (i32.add
-                  (call $fibonacci
-                   (i32.add
-                    (local.get $0)
-                    (i32.const -1)
-                   )
-                  )
-                  (call $fibonacci
-                   (i32.add
-                    (local.get $0)
-                    (i32.const -2)
-                   )
-                  )
-                 )
+                    (then
+                    (local.set $result (local.get $n))
+                    (br 1)
+                    )
                 )
-               )
+                (local.set $result
+                    (f32.add
+                    (call $fib
+                    (f32.sub
+                    (local.get $n)
+                    (f32.const 2.0)
+                    )
+                    )
+                    (call $fib
+                    (f32.sub
+                    (local.get $n)
+                    (f32.const 1.0)
+                    )
+                    )
+                    )
+                )
+                )
+                (return (local.get $result))
+                )
+                )
             "#,
     )
     .expect("failed to parse wat");
@@ -57,12 +57,12 @@ fn main() {
         .expect("failed to instantiate wasm module")
         .assert_no_start();
 
-    assert_eq!(instance.invoke_export_trace(
-        "fibonacci",
-        &[wasmi::RuntimeValue::I32(6)],
+    let _ = instance.invoke_export_trace(
+        "fib",
+        &[wasmi::RuntimeValue::F32(0x3f800000.into())],
         &mut NopExternals,
         tracer.clone(),
-    ).expect("failed to run export"), Some(wasmi::RuntimeValue::I32(8)));
+    );
 
     println!("{:?}", (*tracer).borrow());
 }
