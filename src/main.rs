@@ -57,12 +57,17 @@ fn main() {
         .expect("failed to instantiate wasm module")
         .assert_no_start();
 
-    assert_eq!(instance.invoke_export_trace(
-        "fib",
-        &[wasmi::RuntimeValue::F32(0x40c00000.into())],
-        &mut NopExternals,
-        tracer.clone(),
-    ).expect("failed to execute"), Some(wasmi::RuntimeValue::F32(0x41000000.into())));
+    assert_eq!(
+        instance
+            .invoke_export_trace(
+                "fib",
+                &[wasmi::RuntimeValue::F32(0x40c00000.into())],
+                &mut NopExternals,
+                tracer.clone(),
+            )
+            .expect("failed to execute"),
+        Some(wasmi::RuntimeValue::F32(0x41000000.into()))
+    );
 
     println!("{:?}", (*tracer).borrow());
 }
